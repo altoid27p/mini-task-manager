@@ -103,6 +103,16 @@ function renderTasks() {
     updateStatistics();
 }
 
+
+function generateTaskId() {
+    if (typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+
+    return `task-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+
 // Add a new task
 function addTask(text) {
     const cleanText = text.trim();
@@ -110,7 +120,7 @@ function addTask(text) {
     if (!cleanText) return;
 
     const task = {
-        id: crypto.randomUUID(),
+        id: generateTaskId(),
         text: cleanText,
         completed: false
     };
