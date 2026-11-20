@@ -1,0 +1,23 @@
+{
+  "name": "mini-task-manager",
+  "version": "1.0.0",
+  "description": "A simple and responsive task management web application.",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/altoid27p/mini-task-manager.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/altoid27p/mini-task-manager/issues"
+  },
+  "homepage": "https://github.com/altoid27p/mini-task-manager#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
+  }
+}
