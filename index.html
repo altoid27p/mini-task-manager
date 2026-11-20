@@ -1,0 +1,41 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Task Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <main class="app">
+        <header>
+            <h1>Mini Task Manager</h1>
+            <p>Organize your day, one task at a time.</p>
+        </header>
+
+        <form id="task-form">
+            <input
+                type="text"
+                id="task-input"
+                placeholder="Enter a new task..."
+                aria-label="New task"
+                required
+            >
+            <button type="submit">Add Task</button>
+        </form>
+
+        <section class="task-section">
+            <h2>My Tasks</h2>
+            <ul id="task-list"></ul>
+        </section>
+
+        <footer>
+            <span>Total: <strong id="total-count">0</strong></span>
+            <span>Completed: <strong id="completed-count">0</strong></span>
+            <span>Remaining: <strong id="remaining-count">0</strong></span>
+        </footer>
+    </main>
+</body>
+</html>
