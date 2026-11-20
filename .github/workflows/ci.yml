@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -19,6 +20,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check required files
         run: |
@@ -31,3 +34,4 @@ jobs:
 
       - name: Check Git whitespace errors
         run: git diff --check HEAD^ HEAD
+
