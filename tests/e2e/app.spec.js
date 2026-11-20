@@ -189,3 +189,254 @@ test('tasks persist after page reload', async ({ page }) => {
   expect(savedTasks[0].text).toBe('Persistent task');
   expect(savedTasks[0].completed).toBe(true);
 });
+
+
+test('user cannot add a whitespace-only task', async ({ page }) => {
+  await page.goto('/');
+
+  // Start with empty storage.
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+
+  // Enter whitespace-only text.
+  await page.locator('#task-input').fill('   ');
+
+  // Submit the form.
+  await page.locator('#task-form').evaluate(form => {
+    form.requestSubmit();
+  });
+
+  // Verify no task was created.
+  await expect(page.locator('#task-list li')).toHaveCount(0);
+
+  // Verify statistics remain unchanged.
+  await expect(page.locator('#total-count')).toHaveText('0');
+  await expect(page.locator('#completed-count')).toHaveText('0');
+  await expect(page.locator('#remaining-count')).toHaveText('0');
+
+  // Verify no task was saved.
+  const savedTasks = await page.evaluate(() => {
+    return JSON.parse(
+      localStorage.getItem('mini-task-manager-tasks') || '[]'
+    );
+  });
+
+  expect(savedTasks).toEqual([]);
+});
+
+
+test('task text is trimmed before saving', async ({ page }) => {
+  await page.goto('/');
+
+  // Start with empty storage.
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+
+  // Enter text with leading and trailing spaces.
+  await page.locator('#task-input').fill(
+    '   Learn Playwright Testing   '
+  );
+
+  // Submit the form.
+  await page.locator('#task-form').evaluate(form => {
+    form.requestSubmit();
+  });
+
+  // Verify the displayed text is trimmed.
+  await expect(
+    page.locator('#task-list li span')
+  ).toHaveText('Learn Playwright Testing');
+
+  // Verify statistics.
+  await expect(page.locator('#total-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('1');
+
+  // Verify the saved text is also trimmed.
+  const savedTasks = await page.evaluate(() => {
+    return JSON.parse(
+      localStorage.getItem('mini-task-manager-tasks') || '[]'
+    );
+  });
+
+  expect(savedTasks).toHaveLength(1);
+  expect(savedTasks[0].text).toBe('Learn Playwright Testing');
+});
+
+
+test('duplicate task names are handled independently', async ({ page }) => {
+  await page.goto('/');
+
+  // Start with empty storage.
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+
+  const input = page.locator('#task-input');
+  const form = page.locator('#task-form');
+
+  // Add two tasks with the same name.
+  for (let i = 0; i < 2; i++) {
+    await input.fill('Duplicate task');
+    await form.evaluate(element => element.requestSubmit());
+  }
+
+  // Both tasks should exist.
+  await expect(page.locator('#task-list li')).toHaveCount(2);
+  await expect(page.locator('#total-count')).toHaveText('2');
+
+  // Complete only the first task.
+  await page.getByRole('checkbox', {
+    name: 'Mark Duplicate task as completed',
+  }).first().check();
+
+  await expect(page.locator('#completed-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('1');
+
+  // Delete only the first task.
+  await page.getByRole('button', {
+    name: 'Delete Duplicate task',
+  }).first().click();
+
+  // The second task must remain.
+  await expect(page.locator('#task-list li')).toHaveCount(1);
+  await expect(page.locator('#total-count')).toHaveText('1');
+
+  // Verify the remaining task is not completed.
+  await expect(page.getByRole('checkbox', {
+    name: 'Mark Duplicate task as completed',
+  })).not.toBeChecked();
+
+  // Verify saved data.
+  const savedTasks = await page.evaluate(() => {
+    return JSON.parse(
+      localStorage.getItem('mini-task-manager-tasks') || '[]'
+    );
+  });
+
+  expect(savedTasks).toHaveLength(1);
+  expect(savedTasks[0].text).toBe('Duplicate task');
+  expect(savedTasks[0].completed).toBe(false);
+});
+
+
+test('application recovers from malformed localStorage JSON', async ({ page }) => {
+  await page.goto('/');
+
+  // Store invalid JSON.
+  await page.evaluate(() => {
+    localStorage.setItem(
+      'mini-task-manager-tasks',
+      '{invalid-json'
+    );
+  });
+
+  // Reload to trigger loadTasks().
+  await page.reload();
+
+  // Verify the application still works.
+  await expect(page.locator('#task-list li')).toHaveCount(0);
+
+  await expect(page.locator('#total-count')).toHaveText('0');
+  await expect(page.locator('#completed-count')).toHaveText('0');
+  await expect(page.locator('#remaining-count')).toHaveText('0');
+
+  // Add a valid task after recovery.
+  await page.locator('#task-input').fill('Recovered task');
+
+  await page.locator('#task-form').evaluate(form => {
+    form.requestSubmit();
+  });
+
+  // Verify the new task appears.
+  await expect(
+    page.locator('#task-list li')
+  ).toHaveCount(1);
+
+  await expect(
+    page.locator('#task-list')
+  ).toContainText('Recovered task');
+
+  // Verify valid data replaced malformed JSON.
+  const savedTasks = await page.evaluate(() => {
+    return JSON.parse(
+      localStorage.getItem('mini-task-manager-tasks')
+    );
+  });
+
+  expect(savedTasks).toHaveLength(1);
+  expect(savedTasks[0].text).toBe('Recovered task');
+  expect(savedTasks[0].completed).toBe(false);
+});
+
+
+test('invalid stored tasks are filtered out', async ({ page }) => {
+  await page.goto('/');
+
+  // Prepare a mixture of valid and invalid tasks.
+  const storedTasks = [
+    {
+      id: 'valid-1',
+      text: 'Valid task',
+      completed: false,
+    },
+    {
+      id: 'valid-2',
+      text: 'Completed task',
+      completed: true,
+    },
+    {
+      id: 123,
+      text: 'Invalid ID',
+      completed: false,
+    },
+    {
+      id: 'invalid-text',
+      text: null,
+      completed: false,
+    },
+    {
+      id: 'invalid-status',
+      text: 'Invalid status',
+      completed: 'yes',
+    },
+    null,
+  ];
+
+  // Store test data.
+  await page.evaluate(tasks => {
+    localStorage.setItem(
+      'mini-task-manager-tasks',
+      JSON.stringify(tasks)
+    );
+  }, storedTasks);
+
+  // Reload to trigger loadTasks().
+  await page.reload();
+
+  // Only the two valid tasks should appear.
+  await expect(page.locator('#task-list li')).toHaveCount(2);
+
+  await expect(page.locator('#task-list'))
+    .toContainText('Valid task');
+
+  await expect(page.locator('#task-list'))
+    .toContainText('Completed task');
+
+  // Verify statistics.
+  await expect(page.locator('#total-count')).toHaveText('2');
+  await expect(page.locator('#completed-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('1');
+
+  // Verify the completed state.
+  await expect(
+    page.getByRole('checkbox', {
+      name: 'Mark Completed task as completed',
+    })
+  ).toBeChecked();
+
+  // Verify invalid tasks are not rendered.
+  await expect(page.locator('#task-list'))
+    .not.toContainText('Invalid ID');
+
+  await expect(page.locator('#task-list'))
+    .not.toContainText('Invalid status');
+});
