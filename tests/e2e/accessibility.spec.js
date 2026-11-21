@@ -75,4 +75,3 @@ test('completed task has no detectable WCAG 2.1 A and AA violations', async ({ p
 
   expect(accessibilityScan.violations).toEqual([]);
 });
-
