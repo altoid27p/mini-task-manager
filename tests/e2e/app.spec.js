@@ -605,3 +605,174 @@ test('desktop user can complete a task', async ({ page }) => {
   await expect(page.locator('#completed-count')).toHaveText('1');
   await expect(page.locator('#remaining-count')).toHaveText('0');
 });
+
+test('task input is accessible using keyboard navigation', async ({ page }) => {
+  await page.goto('/');
+
+  // Start keyboard navigation from the beginning of the page.
+  await page.locator('body').focus();
+
+  // Navigate using the Tab key.
+  await page.keyboard.press('Tab');
+
+  // Verify the task input receives keyboard focus.
+  await expect(page.locator('#task-input')).toBeFocused();
+});
+
+test('user can add a task using the Enter key', async ({ page }) => {
+  await page.goto('/');
+
+  const taskInput = page.locator('#task-input');
+
+  // Focus the task input.
+  await taskInput.focus();
+
+  // Type a task using the keyboard.
+  await page.keyboard.type('Keyboard accessibility task');
+
+  // Submit the form using Enter.
+  await page.keyboard.press('Enter');
+
+  // Verify the task was created.
+  const task = page.locator('#task-list li').filter({
+    hasText: 'Keyboard accessibility task',
+  });
+
+  await expect(task).toHaveCount(1);
+
+  // Verify task statistics.
+  await expect(page.locator('#total-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('1');
+});
+
+test('user can complete a task using the keyboard', async ({ page }) => {
+  await page.goto('/');
+
+  // Create a task using the keyboard.
+  const taskInput = page.locator('#task-input');
+
+  await taskInput.focus();
+  await page.keyboard.type('Keyboard completion task');
+  await page.keyboard.press('Enter');
+
+  // Find the task checkbox.
+  const task = page.locator('#task-list li').filter({
+    hasText: 'Keyboard completion task',
+  });
+
+  const checkbox = task.getByRole('checkbox');
+
+  await expect(checkbox).toBeVisible();
+
+  // Focus the checkbox without clicking it.
+  await checkbox.focus();
+
+  await expect(checkbox).toBeFocused();
+
+  // Complete the task using Space.
+  await page.keyboard.press('Space');
+
+  // Verify the completed state.
+  await expect(checkbox).toBeChecked();
+  await expect(task).toHaveClass(/completed/);
+
+  // Verify task statistics.
+  await expect(page.locator('#total-count')).toHaveText('1');
+  await expect(page.locator('#completed-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('0');
+});
+
+test('delete button has an accessible name', async ({ page }) => {
+  await page.goto('/');
+
+  // Create a task.
+  await page.locator('#task-input').fill('Accessible delete task');
+  await page.locator('#task-input').press('Enter');
+
+  // Find the delete button using its accessible name.
+  const deleteButton = page.getByRole('button', {
+    name: 'Delete Accessible delete task',
+  });
+
+  // Verify the button is visible and enabled.
+  await expect(deleteButton).toBeVisible();
+  await expect(deleteButton).toBeEnabled();
+
+  // Verify the accessible name.
+  await expect(deleteButton).toHaveAttribute(
+    'aria-label',
+    'Delete Accessible delete task'
+  );
+});
+
+test('task input has an accessible name', async ({ page }) => {
+  await page.goto('/');
+
+  const taskInput = page.locator('#task-input');
+
+  // Verify that the input exists.
+  await expect(taskInput).toBeVisible();
+
+  // Verify that it has an accessible name.
+  const accessibleName = await taskInput.evaluate((input) => {
+    const label = input.labels?.[0]?.textContent?.trim();
+
+    const ariaLabel = input.getAttribute('aria-label')?.trim();
+
+    const labelledBy = input.getAttribute('aria-labelledby');
+
+    const referencedLabel = labelledBy
+      ? labelledBy.split(/\s+/)
+          .map((id) => document.getElementById(id)?.textContent?.trim() || '')
+          .join(' ')
+          .trim()
+      : '';
+
+    return label || ariaLabel || referencedLabel;
+  });
+
+  expect(accessibleName).toBeTruthy();
+});
+
+test('task checkbox is reachable using the Tab key', async ({ page }) => {
+  await page.goto('/');
+
+  // Create a task.
+  const taskInput = page.locator('#task-input');
+
+  await taskInput.fill('Keyboard navigation task');
+  await taskInput.press('Enter');
+
+  const task = page.locator('#task-list li').filter({
+    hasText: 'Keyboard navigation task',
+  });
+
+  const checkbox = task.getByRole('checkbox');
+
+  await expect(checkbox).toBeVisible();
+
+  // Start keyboard navigation from the task input.
+  await taskInput.focus();
+
+  // Navigate through focusable elements using Tab.
+  let checkboxReached = false;
+
+  for (let i = 0; i < 10; i++) {
+    await page.keyboard.press('Tab');
+
+    if (await checkbox.evaluate(
+      (element) => document.activeElement === element
+    )) {
+      checkboxReached = true;
+      break;
+    }
+  }
+
+  expect(checkboxReached).toBe(true);
+
+  // Verify that Space activates the focused checkbox.
+  await page.keyboard.press('Space');
+
+  await expect(checkbox).toBeChecked();
+  await expect(task).toHaveClass(/completed/);
+});
