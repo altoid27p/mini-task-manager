@@ -100,11 +100,11 @@ h2 {
 
 #task-list li.completed span {
     text-decoration: line-through;
-    color: #94a3b8;
+    color: #475569;
 }
 
 .delete-btn {
-    background: #ef4444;
+    background: #b91c1c;
     padding: 8px 12px;
 }
 

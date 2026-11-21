@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/altoid27p/mini-task-manager#readme",
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.65.1"
   }
 }
