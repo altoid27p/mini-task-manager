@@ -440,3 +440,168 @@ test('invalid stored tasks are filtered out', async ({ page }) => {
   await expect(page.locator('#task-list'))
     .not.toContainText('Invalid status');
 });
+
+test('mobile viewport displays the task form without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({
+    width: 375,
+    height: 812,
+  });
+
+  await page.goto('/');
+
+  const taskInput = page.locator('#task-input');
+  const taskForm = page.locator('#task-form');
+
+  await expect(taskInput).toBeVisible();
+  await expect(taskForm).toBeVisible();
+
+  const hasHorizontalOverflow = await page.evaluate(() => {
+    return document.documentElement.scrollWidth > window.innerWidth;
+  });
+
+  expect(hasHorizontalOverflow).toBe(false);
+});
+
+test('desktop viewport displays the task form without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({
+    width: 1440,
+    height: 900,
+  });
+
+  await page.goto('/');
+
+  const taskInput = page.locator('#task-input');
+  const taskForm = page.locator('#task-form');
+
+  await expect(taskInput).toBeVisible();
+  await expect(taskForm).toBeVisible();
+
+  const hasHorizontalOverflow = await page.evaluate(() => {
+    return document.documentElement.scrollWidth > window.innerWidth;
+  });
+
+  expect(hasHorizontalOverflow).toBe(false);
+});
+
+test('mobile user can add a task', async ({ page }) => {
+  await page.setViewportSize({
+    width: 375,
+    height: 812,
+  });
+
+  await page.goto('/');
+
+  await page.locator('#task-input').fill('Mobile responsive task');
+
+  await page.locator('#task-form').evaluate((form) => {
+    form.requestSubmit();
+  });
+
+  const taskList = page.locator('#task-list');
+
+  await expect(taskList.locator('li')).toHaveCount(1);
+
+  await expect(
+    taskList.getByText('Mobile responsive task')
+  ).toBeVisible();
+
+  await expect(page.locator('#total-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('1');
+});
+
+test('mobile user can complete a task', async ({ page }) => {
+  await page.setViewportSize({
+    width: 375,
+    height: 812,
+  });
+
+  await page.goto('/');
+
+  // Add a new task
+  await page.locator('#task-input').fill('Complete mobile task');
+
+  await page.locator('#task-form').evaluate((form) => {
+    form.requestSubmit();
+  });
+
+  const task = page.locator('#task-list li').filter({
+    hasText: 'Complete mobile task',
+  });
+
+  await expect(task).toHaveCount(1);
+
+  // Complete the task
+  await task.getByRole('checkbox').check();
+
+  // Verify completed state
+  await expect(task).toHaveClass(/completed/);
+  await expect(task.getByRole('checkbox')).toBeChecked();
+
+  // Verify statistics
+  await expect(page.locator('#total-count')).toHaveText('1');
+  await expect(page.locator('#completed-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('0');
+});
+
+test('desktop user can add a task', async ({ page }) => {
+  await page.setViewportSize({
+    width: 1440,
+    height: 900,
+  });
+
+  await page.goto('/');
+
+  // Add a new task
+  await page.locator('#task-input').fill('Desktop responsive task');
+
+  await page.locator('#task-form').evaluate((form) => {
+    form.requestSubmit();
+  });
+
+  // Verify the task appears
+  const taskList = page.locator('#task-list');
+
+  await expect(taskList.locator('li')).toHaveCount(1);
+
+  await expect(
+    taskList.getByText('Desktop responsive task')
+  ).toBeVisible();
+
+  // Verify task statistics
+  await expect(page.locator('#total-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('1');
+});
+
+test('desktop user can complete a task', async ({ page }) => {
+  await page.setViewportSize({
+    width: 1440,
+    height: 900,
+  });
+
+  await page.goto('/');
+
+  // Add a new task
+  await page.locator('#task-input').fill('Complete desktop task');
+
+  await page.locator('#task-form').evaluate((form) => {
+    form.requestSubmit();
+  });
+
+  const task = page.locator('#task-list li').filter({
+    hasText: 'Complete desktop task',
+  });
+
+  await expect(task).toHaveCount(1);
+
+  // Complete the task
+  await task.getByRole('checkbox').check();
+
+  // Verify completed state
+  await expect(task).toHaveClass(/completed/);
+  await expect(task.getByRole('checkbox')).toBeChecked();
+
+  // Verify statistics
+  await expect(page.locator('#total-count')).toHaveText('1');
+  await expect(page.locator('#completed-count')).toHaveText('1');
+  await expect(page.locator('#remaining-count')).toHaveText('0');
+});
